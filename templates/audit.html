@@ -1,0 +1,25 @@
+{% extends "study_base.html" if s else "base.html" %}
+{% block body %}{% if s %}{{ super() }}{% else %}<h1>전체 변경이력</h1><p class="sub">최근 1,000건. 이력은 수정·삭제할 수 없습니다.</p>{{ self.tab() }}{% endif %}{% endblock %}
+{% block tab %}
+{% if s and tbls %}
+<form class="row noprint" method="get" style="margin-bottom:12px">
+  <select name="tbl" onchange="this.form.submit()"><option value="">전체 대상</option>{% for x in tbls %}<option {{ 'selected' if tbl == x }}>{{ x }}</option>{% endfor %}</select>
+  <span class="sub">이력은 수정·삭제할 수 없습니다.</span>
+</form>
+{% endif %}
+<div class="card scroll">
+<table>
+  <thead><tr><th>일시</th><th>사용자</th>{% if not s %}<th>시험</th>{% endif %}<th>대상</th><th>항목</th><th>작업</th><th>이전 값</th><th>새 값</th><th>사유</th></tr></thead>
+  {% for r in rows %}
+  <tr>
+    <td class="nowrap small">{{ r.ts }}</td><td class="nowrap">{{ r.user }}</td>
+    {% if not s %}<td class="nowrap">{{ r.study_no or '-' }}</td>{% endif %}
+    <td>{{ r.tbl }}</td><td>{{ r.rec or '' }}{% if r.field %} · {{ r.field }}{% endif %}</td><td>{{ r.action }}</td>
+    <td>{{ r.old if r.old is not none else '' }}</td><td>{{ r.new if r.new is not none else '' }}</td><td>{{ r.reason or '' }}</td>
+  </tr>
+  {% else %}
+  <tr><td colspan="9" class="mute">이력이 없습니다.</td></tr>
+  {% endfor %}
+</table>
+</div>
+{% endblock %}

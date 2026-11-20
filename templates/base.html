@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}CRO 실험 관리{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="{{ url_for('index') }}">CRO 실험 관리</a>
+  {% if g.user %}
+  <nav>
+    <a href="{{ url_for('index') }}">시험 목록</a>
+    {% if g.user['role'] == 'admin' %}
+    <a href="{{ url_for('admin_doctypes') }}">문서 종류</a>
+    <a href="{{ url_for('admin_users') }}">사용자</a>
+    <a href="{{ url_for('admin_audit') }}">전체 이력</a>
+    <a href="{{ url_for('admin_backup') }}">DB 백업</a>
+    {% endif %}
+  </nav>
+  <div class="who">{{ g.user['name'] }} · <a href="{{ url_for('account') }}">비밀번호 변경</a> · <a href="{{ url_for('logout') }}">로그아웃</a></div>
+  {% endif %}
+</header>
+<main>
+{% with msgs = get_flashed_messages(with_categories=true) %}
+{% for c, m in msgs %}<div class="flash {{ c }}">{{ m }}</div>{% endfor %}
+{% endwith %}
+{% block body %}{% endblock %}
+</main>
+</body>
+</html>

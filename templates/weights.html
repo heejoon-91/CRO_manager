@@ -1,0 +1,97 @@
+{% extends "study_base.html" %}
+{% block tab %}
+<div class="row between noprint" style="margin-bottom:12px">
+  <form class="row" method="get" action="{{ url_for('weights_entry', sid=s.id) }}">
+    <label style="margin:0">측정일</label>
+    <input type="date" name="date" value="{{ today }}" max="{{ today }}" required>
+    <button class="btn" {{ 'disabled' if s.status == '종료' }}>체중 입력</button>
+  </form>
+  <div class="row">
+    <a class="btn ghost" href="{{ url_for('weights_csv', sid=s.id) }}">엑셀(CSV) 내보내기</a>
+    <button class="btn ghost" onclick="window.print()">인쇄</button>
+  </div>
+</div>
+{% if not groups %}
+<div class="card mute">먼저 <a href="{{ url_for('animals', sid=s.id) }}">군 · 개체</a>를 등록하세요.</div>
+{% elif not dates %}
+<div class="card mute">아직 체중 기록이 없습니다. 위에서 측정일을 고르고 <b>체중 입력</b>을 누르세요.</div>
+{% else %}
+<div class="card">
+  <h2>군별 평균 체중 ({{ s.weight_unit }}, 평균 ± SD)</h2>
+  <div id="chart"></div>
+</div>
+<div class="card">
+  <h2>개체별 체중 ({{ s.weight_unit }})</h2>
+  <div class="scroll">
+  <table class="grid">
+    <thead>
+      <tr><th>군</th><th>개체</th>
+      {% for d in dates %}<th class="n"><a href="{{ url_for('weights_entry', sid=s.id, date=d) }}" title="{{ d }} 수정">{{ d[5:] }}</a>{% if d in days %}<div class="small mute">D{{ '%+d' % days[d] if days[d] else '0' }}</div>{% endif %}</th>{% endfor %}
+      </tr>
+    </thead>
+    {% for gr in groups %}
+    <tbody>
+      {% for a in gr.animals %}
+      <tr>
+        {% if loop.first %}<th rowspan="{{ gr.animals|length }}">{{ gr.name }}{% if gr.kind %}<br><span class="mute small">{{ gr.kind }}</span>{% endif %}</th>{% endif %}
+        <td class="nowrap">{{ a.animal_no }}{% if a.status != '사용중' %} <span class="badge b-{{ a.status }}">{{ a.status }}</span>{% endif %}</td>
+        {% for d in dates %}<td class="n">{{ w.get(a.id, {}).get(d)|fixed(nd) }}</td>{% endfor %}
+      </tr>
+      {% endfor %}
+      <tr class="stat">
+        <th colspan="2">평균 ± SD (n)</th>
+        {% for d in dates %}{% set st = gr.stats.get(d) %}<td class="n">{% if st %}{{ st.mean|fixed(nd + 1) }}{% if st.sd is not none %} ± {{ st.sd|fixed(nd + 1) }}{% endif %} ({{ st.n }}){% endif %}</td>{% endfor %}
+      </tr>
+    </tbody>
+    {% endfor %}
+  </table>
+  </div>
+  <p class="sub">날짜를 누르면 해당 일자의 입력 화면으로 이동합니다. 저장된 값을 고치려면 변경 사유가 필요합니다.</p>
+</div>
+<script>
+(function(){
+  var D = {{ chart|tojson }}, el = document.getElementById('chart');
+  var C = ['#1f5fbf','#c0392b','#18794e','#b7791f','#6b46c1','#0e7490','#b83280','#4a5568'];
+  var W = 900, H = 340, m = {l:60, r:170, t:14, b:42};
+  var t = D.dates.map(function(d){ return Date.parse(d) / 864e5; });
+  var t0 = t[0], t1 = t[t.length-1], lo = Infinity, hi = -Infinity;
+  D.series.forEach(function(s){ s.mean.forEach(function(v,i){ if(v==null) return; var e = s.sd[i]||0; lo=Math.min(lo,v-e); hi=Math.max(hi,v+e); }); });
+  if(!isFinite(lo)) return;
+  var pad = (hi-lo)*0.1 || Math.abs(hi)*0.05 || 1; lo -= pad; hi += pad;
+  function x(v){ return t1===t0 ? (m.l+(W-m.l-m.r)/2) : m.l+(v-t0)/(t1-t0)*(W-m.l-m.r); }
+  function y(v){ return m.t+(hi-v)/(hi-lo)*(H-m.t-m.b); }
+  function esc(s){ return String(s).replace(/[&<>"]/g, function(ch){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]; }); }
+  var step = Math.pow(10, Math.floor(Math.log10((hi-lo)/5))), r = (hi-lo)/5/step;
+  step *= r>5 ? 10 : r>2 ? 5 : r>1 ? 2 : 1;
+  var dec = step < 1 ? Math.ceil(-Math.log10(step)) : 0;
+  var o = '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;max-width:'+W+'px;font-size:12px" role="img" aria-label="군별 평균 체중">';
+  for(var v = Math.ceil(lo/step)*step; v <= hi; v += step){
+    o += '<line x1="'+m.l+'" x2="'+(W-m.r)+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="#e3e7ec"/>';
+    o += '<text x="'+(m.l-8)+'" y="'+(y(v)+4)+'" text-anchor="end" fill="#6b7685">'+v.toFixed(dec)+'</text>';
+  }
+  var every = Math.ceil(D.dates.length/10);
+  D.dates.forEach(function(d,i){ if(i%every) return;
+    o += '<text x="'+x(t[i])+'" y="'+(H-m.b+18)+'" text-anchor="middle" fill="#6b7685">'+d.slice(5)+'</text>'; });
+  o += '<line x1="'+m.l+'" x2="'+(W-m.r)+'" y1="'+(H-m.b)+'" y2="'+(H-m.b)+'" stroke="#9aa5b1"/>';
+  o += '<text x="14" y="'+(m.t+(H-m.t-m.b)/2)+'" transform="rotate(-90 14 '+(m.t+(H-m.t-m.b)/2)+')" text-anchor="middle" fill="#6b7685">체중 ('+D.unit+')</text>';
+  D.series.forEach(function(s,k){
+    var c = C[k % C.length], p = '';
+    s.mean.forEach(function(v,i){
+      if(v==null) return;
+      var px = x(t[i]), e = s.sd[i];
+      if(e){ o += '<line x1="'+px+'" x2="'+px+'" y1="'+y(v-e)+'" y2="'+y(v+e)+'" stroke="'+c+'" opacity=".55"/>'
+               + '<line x1="'+(px-4)+'" x2="'+(px+4)+'" y1="'+y(v-e)+'" y2="'+y(v-e)+'" stroke="'+c+'" opacity=".55"/>'
+               + '<line x1="'+(px-4)+'" x2="'+(px+4)+'" y1="'+y(v+e)+'" y2="'+y(v+e)+'" stroke="'+c+'" opacity=".55"/>'; }
+      p += (p ? 'L' : 'M') + px + ' ' + y(v);
+      o += '<circle cx="'+px+'" cy="'+y(v)+'" r="3.5" fill="'+c+'"><title>'+esc(s.name)+' '+D.dates[i]+': '+v.toFixed(2)+'</title></circle>';
+    });
+    o += '<path d="'+p+'" fill="none" stroke="'+c+'" stroke-width="2"/>';
+    var ly = m.t+10+k*20, name = s.name.length > 16 ? s.name.slice(0,15)+'…' : s.name;
+    o += '<rect x="'+(W-m.r+16)+'" y="'+(ly-8)+'" width="12" height="12" rx="2" fill="'+c+'"/>';
+    o += '<text x="'+(W-m.r+34)+'" y="'+(ly+3)+'" fill="#1c2430">'+esc(name)+'</text>';
+  });
+  el.innerHTML = o + '</svg>';
+})();
+</script>
+{% endif %}
+{% endblock %}

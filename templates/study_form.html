@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block body %}
+<h1>{{ '시험 정보 수정' if s else '시험 등록' }}</h1>
+<form class="card" method="post">
+  {{ csrf() }}
+  <div class="form">
+    <div><label>시험번호 *</label><input type="text" name="study_no" value="{{ f.study_no or '' }}" required placeholder="예: KULF-2026-001"></div>
+    <div class="wide"><label>실험제목 *</label><input type="text" name="title" value="{{ f.title or '' }}" required></div>
+    <div><label>동물종 *</label><input type="text" name="species" value="{{ f.species or '' }}" required list="species" placeholder="예: 고양이">
+      <datalist id="species">{% for x in ['마우스','랫드','기니픽','토끼','개','고양이','돼지','닭','염소','소'] %}<option value="{{ x }}">{% endfor %}</datalist></div>
+    <div><label>마리수(계획) *</label><input type="number" name="n_animals" min="1" value="{{ f.n_animals or '' }}" required></div>
+    <div><label>체중 단위</label><select name="weight_unit"><option {{ 'selected' if f.weight_unit == 'g' }}>g</option><option {{ 'selected' if f.weight_unit == 'kg' }}>kg</option></select></div>
+    <div><label>시작일</label><input type="date" name="start_date" value="{{ f.start_date or '' }}"></div>
+    <div><label>종료일</label><input type="date" name="end_date" value="{{ f.end_date or '' }}"></div>
+    <div><label>상태</label><select name="status">{% for x in STATUSES %}<option {{ 'selected' if f.status == x }}>{{ x }}</option>{% endfor %}</select></div>
+    <div><label>시험책임자</label><input type="text" name="director" value="{{ f.director or '' }}"></div>
+    <div><label>의뢰기관</label><input type="text" name="sponsor" value="{{ f.sponsor or '' }}"></div>
+    <div class="wide"><label>비고</label><textarea name="note">{{ f.note or '' }}</textarea></div>
+    {% if s %}<div class="wide"><label>변경 사유 * (수정 시 변경이력에 남습니다)</label><input type="text" name="reason" value="{{ request.form.get('reason', '') }}"></div>{% endif %}
+  </div>
+  <div class="row" style="margin-top:16px">
+    <button class="btn">저장</button>
+    <a class="btn ghost" href="{{ url_for('study', sid=s.id) if s else url_for('index') }}">취소</a>
+  </div>
+</form>
+{% endblock %}

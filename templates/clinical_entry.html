@@ -1,0 +1,70 @@
+{% extends "study_base.html" %}
+{% block tab %}
+<form class="card row noprint" method="get">
+  <label style="margin:0">관찰일 변경</label>
+  <input type="date" name="date" value="{{ d }}" max="{{ today }}" required>
+  <button class="btn ghost">이동</button>
+  <a href="{{ url_for('clinical', sid=s.id) }}">← 임상증상 목록으로 돌아가기</a>
+</form>
+{% if not groups %}
+<div class="card mute">먼저 <a href="{{ url_for('animals', sid=s.id) }}">군 · 개체</a>를 등록하세요.</div>
+{% else %}
+<form class="card" method="post">
+  {{ csrf() }}
+  <input type="hidden" name="date" value="{{ d }}">
+  <div class="row between">
+    <h2>{{ d }} 임상증상 관찰</h2>
+    <button type="button" class="btn ghost small" id="allNormal">미관찰 개체를 모두 '정상'으로</button>
+  </div>
+  <datalist id="signs">{% for x in COMMON_SIGNS %}<option value="{{ x }}">{% endfor %}</datalist>
+  <table>
+    <thead><tr><th>군</th><th>개체</th><th>판정</th><th>증상 (이상일 때)</th><th>정도</th><th>비고</th></tr></thead>
+    {% for gr in groups %}{% for a in gr.animals %}
+    {% set o = cur.get(a.id) %}
+    {% if posted is not none %}
+      {% set st = posted.get('c_' ~ a.id, '') %}{% set sg = posted.get('s_' ~ a.id, '') %}
+      {% set sv = posted.get('v_' ~ a.id, '') %}{% set nt = posted.get('n_' ~ a.id, '') %}
+    {% elif o %}
+      {% set st = 'N' if o.normal else 'A' %}{% set sg = o.signs or '' %}{% set sv = o.severity or '' %}{% set nt = o.note or '' %}
+    {% else %}
+      {% set st = '' %}{% set sg = '' %}{% set sv = '' %}{% set nt = '' %}
+    {% endif %}
+    <tr data-saved="{{ '1' if o else '' }}">
+      <td>{% if loop.first %}{{ gr.name }}{% if gr.kind %} <span class="mute small">{{ gr.kind }}</span>{% endif %}{% endif %}</td>
+      <td class="nowrap">{{ a.animal_no }}{% if a.status != '사용중' %} <span class="badge b-{{ a.status }}">{{ a.status }} {{ a.status_date or '' }}</span>{% endif %}</td>
+      <td><select name="c_{{ a.id }}" class="st" data-live="{{ '1' if a.status == '사용중' else '' }}">
+        <option value="" {{ 'selected' if st == '' }}>미관찰</option>
+        <option value="N" {{ 'selected' if st == 'N' }}>정상</option>
+        <option value="A" {{ 'selected' if st == 'A' }}>이상</option></select></td>
+      <td><input type="text" name="s_{{ a.id }}" value="{{ sg }}" list="signs" placeholder="예: 설사, 활동성 저하" style="width:260px"></td>
+      <td><select name="v_{{ a.id }}"><option value="">-</option>{% for x in SEVERITIES %}<option {{ 'selected' if sv == x }}>{{ x }}</option>{% endfor %}</select></td>
+      <td><input type="text" name="n_{{ a.id }}" value="{{ nt }}" style="width:220px"></td>
+    </tr>
+    {% endfor %}{% endfor %}
+  </table>
+  <div style="margin-top:14px;{{ '' if cur else 'display:none' }}" id="reasonBox">
+    <label>변경 사유 — 이미 저장된 기록을 수정·삭제할 때 필수</label>
+    <input type="text" name="reason" value="{{ posted.get('reason', '') if posted is not none else '' }}" style="width:100%;max-width:520px">
+  </div>
+  <div class="row" style="margin-top:16px">
+    <button class="btn" {{ 'disabled' if s.status == '종료' }}>저장</button>
+    <span class="sub">'미관찰'로 둔 개체는 저장되지 않습니다. 개체당 하루 1건 기록됩니다.</span>
+  </div>
+</form>
+<script>
+(function(){
+  function sync(sel){
+    var tr = sel.closest('tr'), on = sel.value === 'A';
+    tr.querySelector('input[name^="s_"]').disabled = !on;
+    tr.querySelector('select[name^="v_"]').disabled = !on;
+    tr.style.background = on ? '#fff8f7' : '';
+  }
+  var sels = [].slice.call(document.querySelectorAll('select.st'));
+  sels.forEach(function(s){ s.addEventListener('change', function(){ sync(s); }); sync(s); });
+  document.getElementById('allNormal').addEventListener('click', function(){
+    sels.forEach(function(s){ if(s.value === '' && s.dataset.live){ s.value = 'N'; sync(s); } });
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

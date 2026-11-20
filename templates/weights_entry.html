@@ -1,0 +1,64 @@
+{% extends "study_base.html" %}
+{% block tab %}
+<form class="card row noprint" method="get">
+  <label style="margin:0">측정일 변경</label>
+  <input type="date" name="date" value="{{ d }}" max="{{ today }}" required>
+  <button class="btn ghost">이동</button>
+  <a href="{{ url_for('weights', sid=s.id) }}">← 체중 표로 돌아가기</a>
+</form>
+{% if not groups %}
+<div class="card mute">먼저 <a href="{{ url_for('animals', sid=s.id) }}">군 · 개체</a>를 등록하세요.</div>
+{% else %}
+<form class="card" method="post">
+  {{ csrf() }}
+  <input type="hidden" name="date" value="{{ d }}">
+  <h2>{{ d }} 체중 입력 ({{ s.weight_unit }})</h2>
+  <table>
+    <thead><tr><th>군</th><th>개체</th><th class="n">직전 측정</th><th>체중 ({{ s.weight_unit }})</th><th>변화</th></tr></thead>
+    {% for gr in groups %}{% for a in gr.animals %}
+    {% set p = prev.get(a.id) %}
+    {% set val = posted.get('w_' ~ a.id, '') if posted is not none else (cur.get(a.id)|num(3)) %}
+    <tr>
+      <td>{% if loop.first %}{{ gr.name }}{% if gr.kind %} <span class="mute small">{{ gr.kind }}</span>{% endif %}{% endif %}</td>
+      <td>{{ a.animal_no }}{% if a.status != '사용중' %} <span class="badge b-{{ a.status }}">{{ a.status }} {{ a.status_date or '' }}</span>{% endif %}</td>
+      <td class="n mute">{% if p %}{{ p.value|num }} <span class="small">({{ p.date[5:] }})</span>{% else %}-{% endif %}</td>
+      <td><input class="w" type="text" inputmode="decimal" name="w_{{ a.id }}" value="{{ val }}" data-prev="{{ p.value if p else '' }}" data-saved="{{ cur.get(a.id)|num(3) }}" autocomplete="off"></td>
+      <td class="small" data-diff></td>
+    </tr>
+    {% endfor %}{% endfor %}
+  </table>
+  <div id="reasonBox" style="margin-top:14px;display:none">
+    <label>변경 사유 * — 이미 저장된 값을 수정·삭제합니다</label>
+    <input type="text" name="reason" value="{{ posted.get('reason', '') if posted is not none else '' }}" style="width:100%;max-width:520px">
+  </div>
+  <div class="row" style="margin-top:16px">
+    <button class="btn" {{ 'disabled' if s.status == '종료' }}>저장</button>
+    <span class="sub">직전 측정 대비 ±20% 이상이면 노란색으로 표시됩니다(저장은 가능). Enter 키로 다음 칸 이동.</span>
+  </div>
+</form>
+<script>
+(function(){
+  var ins = [].slice.call(document.querySelectorAll('input.w')), box = document.getElementById('reasonBox');
+  function check(){
+    var need = false;
+    ins.forEach(function(i){
+      var v = parseFloat(i.value), p = parseFloat(i.dataset.prev), cell = i.closest('tr').querySelector('[data-diff]');
+      if(i.dataset.saved !== '' && i.value.trim() !== i.dataset.saved) need = true;
+      if(isFinite(v) && isFinite(p) && p > 0){
+        var pct = (v - p) / p * 100;
+        cell.textContent = (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%';
+        i.classList.toggle('flag', Math.abs(pct) >= 20);
+      } else { cell.textContent = ''; i.classList.remove('flag'); }
+    });
+    box.style.display = need ? 'block' : 'none';
+  }
+  ins.forEach(function(i, k){
+    i.addEventListener('input', check);
+    i.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); (ins[k+1] || i).focus(); } });
+  });
+  check();
+  var first = ins.filter(function(i){ return !i.value; })[0]; if(first) first.focus();
+})();
+</script>
+{% endif %}
+{% endblock %}

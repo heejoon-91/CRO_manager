@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="row between" style="margin-bottom:12px">
+  <h1>시험 목록</h1>
+  <a class="btn" href="{{ url_for('study_new') }}">+ 시험 등록</a>
+</div>
+<form class="card row" method="get">
+  <input type="text" name="q" value="{{ q }}" placeholder="시험번호 · 제목 · 동물종 검색" style="width:280px">
+  <select name="status">
+    <option value="">전체 상태</option>
+    {% for x in STATUSES %}<option {{ 'selected' if st == x }}>{{ x }}</option>{% endfor %}
+  </select>
+  <button class="btn ghost">검색</button>
+</form>
+<div class="card scroll">
+{% if studies %}
+<table>
+<thead><tr><th>시험번호</th><th>실험제목</th><th>동물종</th><th class="n">마리수</th><th>기간</th><th>상태</th><th>최근 체중</th><th>최근 관찰</th><th>문서</th></tr></thead>
+<tbody>
+{% for s in studies %}
+<tr>
+  <td class="nowrap"><a href="{{ url_for('study', sid=s.id) }}">{{ s.study_no }}</a></td>
+  <td><a href="{{ url_for('study', sid=s.id) }}">{{ s.title }}</a></td>
+  <td>{{ s.species }}</td>
+  <td class="n">{{ s.n_reg }} / {{ s.n_animals }}</td>
+  <td class="nowrap">{{ s.start_date or '?' }} ~ {{ s.end_date or '?' }}</td>
+  <td><span class="badge b-{{ s.status }}">{{ s.status }}</span></td>
+  <td class="nowrap">{{ s.last_w or '-' }}</td>
+  <td class="nowrap">{{ s.last_c or '-' }}</td>
+  <td class="nowrap">
+    <a href="{{ url_for('docs', sid=s.id) }}">{{ s.doc_done }} / {{ s.doc_total }}</a>
+    <div class="bar"><i style="width:{{ (100 * s.doc_done / s.doc_total)|round|int if s.doc_total else 0 }}%"></i></div>
+  </td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+{% else %}
+<p class="mute">등록된 시험이 없습니다. 오른쪽 위 <b>시험 등록</b>으로 시작하세요.</p>
+{% endif %}
+</div>
+<p class="sub">마리수는 <b>등록 개체 / 계획</b>, 문서는 <b>완료 / 필요 문서 수</b>입니다.</p>
+{% endblock %}

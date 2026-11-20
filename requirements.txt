@@ -1,0 +1,4 @@
+flask>=3.0
+waitress>=3.0
+pypdf>=4.0
+olefile>=0.46

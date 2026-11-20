@@ -1,0 +1,16 @@
+# 실제 자료 (DB, 첨부 파일, 세션 키, 백업) - 절대 올리지 않는다
+data/
+*.db
+*.db-wal
+*.db-shm
+secret.key
+
+# 실행 환경
+.venv/
+__pycache__/
+*.pyc
+
+# 도구/개인 파일
+.omc/
+.claude/
+image.png

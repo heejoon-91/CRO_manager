@@ -1,0 +1,39 @@
+{% extends "study_base.html" %}
+{% block tab %}
+<div class="kpis">
+  <div class="kpi"><div class="l">등록 개체 / 계획</div><div class="v">{{ info.n_reg }} / {{ s.n_animals }}</div>{% if info.n_dead %}<div class="small" style="color:var(--err)">폐사 {{ info.n_dead }}</div>{% endif %}</div>
+  <div class="kpi"><div class="l">체중 측정</div><div class="v">{{ info.w_days }}회</div><div class="small mute">최근 {{ info.w_last or '-' }}</div></div>
+  <div class="kpi"><div class="l">임상 관찰</div><div class="v">{{ info.c_days }}일</div><div class="small mute">최근 {{ info.c_last or '-' }} · 이상 {{ info.c_abn }}건</div></div>
+  <div class="kpi"><div class="l">문서 완료</div><div class="v">{{ info.doc_done }} / {{ info.doc_total }}</div>
+    <div class="bar"><i style="width:{{ (100 * info.doc_done / info.doc_total)|round|int if info.doc_total else 0 }}%"></i></div></div>
+</div>
+<div class="row" style="align-items:flex-start">
+  <div class="card grow" style="min-width:320px">
+    <h2>시험 정보</h2>
+    <dl class="info">
+      <dt>시험번호</dt><dd>{{ s.study_no }}</dd>
+      <dt>실험제목</dt><dd>{{ s.title }}</dd>
+      <dt>동물종</dt><dd>{{ s.species }}</dd>
+      <dt>마리수</dt><dd>{{ s.n_animals }}</dd>
+      <dt>기간</dt><dd>{{ s.start_date or '?' }} ~ {{ s.end_date or '?' }}</dd>
+      <dt>시험책임자</dt><dd>{{ s.director or '-' }}</dd>
+      <dt>의뢰기관</dt><dd>{{ s.sponsor or '-' }}</dd>
+      <dt>체중 단위</dt><dd>{{ s.weight_unit }}</dd>
+      <dt>비고</dt><dd style="white-space:pre-wrap">{{ s.note or '-' }}</dd>
+      <dt>등록</dt><dd class="mute">{{ s.created_by }} · {{ s.created_at }}</dd>
+    </dl>
+  </div>
+  <div class="card grow" style="min-width:320px">
+    <h2>군 구성</h2>
+    {% if groups %}
+    <table><thead><tr><th>군</th><th>성격</th><th class="n">개체 수</th></tr></thead>
+    {% for gr in groups %}<tr><td>{{ gr.name }}</td><td>{{ gr.kind or '-' }}{% if gr.note %} <span class="mute small">{{ gr.note }}</span>{% endif %}</td><td class="n">{{ gr.animals|length }}</td></tr>{% endfor %}</table>
+    {% else %}<p class="mute">아직 군이 없습니다. <a href="{{ url_for('animals', sid=s.id) }}">군 · 개체</a>에서 먼저 등록하세요.</p>{% endif %}
+    <h2 style="margin-top:20px">미완료 문서</h2>
+    {% if pending %}
+    <table>{% for p in pending %}<tr><td class="mute nowrap">{{ p.stage }}</td><td>{{ p.name }}</td><td><span class="badge b-{{ p.status }}">{{ p.status }}</span></td></tr>{% endfor %}</table>
+    <p><a href="{{ url_for('docs', sid=s.id) }}">문서 체크리스트로 이동 →</a></p>
+    {% else %}<p class="mute">미완료 문서가 없습니다.</p>{% endif %}
+  </div>
+</div>
+{% endblock %}

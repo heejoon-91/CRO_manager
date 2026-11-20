@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}{{ s.study_no }} · CRO 실험 관리{% endblock %}
+{% block body %}
+<div class="row between">
+  <div>
+    <div class="sub">{{ s.study_no }} · {{ s.species }} {{ s.n_animals }}마리 · {{ s.start_date or '?' }} ~ {{ s.end_date or '?' }}</div>
+    <h1>{{ s.title }} <span class="badge b-{{ s.status }}">{{ s.status }}</span></h1>
+  </div>
+  <a class="btn ghost" href="{{ url_for('study_edit', sid=s.id) }}">시험 정보 수정</a>
+</div>
+<div class="tabs">
+  <a class="{{ 'on' if tab == 'overview' }}" href="{{ url_for('study', sid=s.id) }}">개요</a>
+  <a class="{{ 'on' if tab == 'animals' }}" href="{{ url_for('animals', sid=s.id) }}">군 · 개체</a>
+  <a class="{{ 'on' if tab == 'weights' }}" href="{{ url_for('weights', sid=s.id) }}">체중</a>
+  <a class="{{ 'on' if tab == 'clinical' }}" href="{{ url_for('clinical', sid=s.id) }}">임상증상</a>
+  <a class="{{ 'on' if tab == 'docs' }}" href="{{ url_for('docs', sid=s.id) }}">문서</a>
+  <a class="{{ 'on' if tab == 'audit' }}" href="{{ url_for('study_audit', sid=s.id) }}">변경이력</a>
+</div>
+{% if s.status == '종료' %}<div class="flash warn">종료된 시험입니다. 체중·임상증상·개체 자료는 수정할 수 없고, 문서만 갱신할 수 있습니다.</div>{% endif %}
+{% block tab %}{% endblock %}
+{% endblock %}

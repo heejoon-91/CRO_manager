@@ -1,0 +1,116 @@
+{
+ "$comment": "컬프 공통 SOP(2026-11-10 서식 재작성판)의 서식별 시험 단계. SOP_scheduler 기본 템플릿의 시험 단계·수시 이벤트 의무에서 만들었다. 서식 번호와 이름이 모두 같을 때만 쓴다. link는 SOP 원문이 그 서식에 체중·증상을 함께 기록하라고 한 경우에만 적는다 (021-1: 일반증상·체중·체온).",
+ "forms": {
+  "KULF/COM/001-2": {
+   "name": "일탈 기록지",
+   "stage": "시험 중",
+   "required": 0
+  },
+  "KULF/COM/002-1": {
+   "name": "시험별 업무분담 및 이해관계 확인서",
+   "stage": "시험 전",
+   "required": 1
+  },
+  "KULF/COM/002-2": {
+   "name": "외부 검체분석 의뢰서",
+   "stage": "시험 중",
+   "required": 1
+  },
+  "KULF/COM/003-3": {
+   "name": "교육훈련 기록지",
+   "stage": "시험 전",
+   "required": 1
+  },
+  "KULF/COM/004-1": {
+   "name": "시험 의뢰서 및 수탁 검토서",
+   "stage": "시험 전",
+   "required": 1
+  },
+  "KULF/COM/004-2": {
+   "name": "시험 접수·처리 대장",
+   "stage": "시험 전",
+   "required": 1
+  },
+  "KULF/COM/005-1": {
+   "name": "기록감독자 지정 통보서",
+   "stage": "시험 전",
+   "required": 1
+  },
+  "KULF/COM/006-1": {
+   "name": "동의서 검토 및 취득 점검표",
+   "stage": "시험 전",
+   "required": 1
+  },
+  "KULF/COM/007-1": {
+   "name": "시험 개시 점검표",
+   "stage": "시험 전",
+   "required": 1
+  },
+  "KULF/COM/008-1": {
+   "name": "이상반응 보고서",
+   "stage": "시험 중",
+   "required": 0
+  },
+  "KULF/COM/009-1": {
+   "name": "조기종료·일시중지 보고서",
+   "stage": "시험 중",
+   "required": 0
+  },
+  "KULF/COM/011-1": {
+   "name": "검체 관리대장",
+   "stage": "시험 중",
+   "required": 1
+  },
+  "KULF/COM/011-2": {
+   "name": "검체 발송 기록지",
+   "stage": "시험 중",
+   "required": 1
+  },
+  "KULF/COM/012-2": {
+   "name": "자료 보관 목록",
+   "stage": "시험 후",
+   "required": 1
+  },
+  "KULF/COM/014-1": {
+   "name": "신뢰성보증 점검표",
+   "stage": "시험 중",
+   "required": 1
+  },
+  "KULF/COM/015-1": {
+   "name": "병원체 관리대장",
+   "stage": "시험 중",
+   "required": 1
+  },
+  "KULF/COM/018-1": {
+   "name": "동물 입수·검역 기록지",
+   "stage": "시험 중",
+   "required": 1
+  },
+  "KULF/COM/019-2": {
+   "name": "동물실험 현황 기록지",
+   "stage": "시험 후",
+   "required": 1
+  },
+  "KULF/COM/020-1": {
+   "name": "채혈 기록지",
+   "stage": "시험 중",
+   "required": 1
+  },
+  "KULF/COM/021-1": {
+   "name": "일반증상 관찰 기록지",
+   "stage": "시험 중",
+   "required": 1,
+   "link": "weights,clinical"
+  },
+  "KULF/COM/022-1": {
+   "name": "마취·안락사 기록지",
+   "stage": "시험 중",
+   "required": 1
+  },
+  "KULF/COM/023-1": {
+   "name": "부검 소견 기록지",
+   "stage": "시험 중",
+   "required": 1
+  }
+ }
+}

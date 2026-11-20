@@ -1,0 +1,123 @@
+{% extends "study_base.html" %}
+{% block tab %}
+<div class="card row between">
+  <div><b>문서 완료 {{ done }} / {{ total }}</b> <span class="mute small">('해당없음' 제외)</span>
+    <div class="bar" style="width:240px;margin-top:6px"><i style="width:{{ (100 * done / total)|round|int if total else 0 }}%"></i></div></div>
+  <div class="sub">문서 종류는 관리자의 <b>문서 종류</b> 메뉴에서 회사 SOP에 맞게 바꿉니다. 한 문서에 파일을 여러 개 올릴 수 있고(여러 개 한꺼번에 선택 가능), 잘못 올린 파일은 사유를 적고 숨깁니다. 숨긴 파일도 서버에 보존되고 변경이력에 남습니다. '미작성' 문서에 파일을 올리면 상태가 자동으로 '작성중'으로 바뀝니다. 종료된 시험도 문서는 계속 갱신할 수 있습니다.</div>
+</div>
+<div class="card row docs-tools">
+  <input type="search" id="doc-q" placeholder="문서명 · 서식 번호 · 문서번호 검색" autocomplete="off" style="width:300px">
+  <span id="doc-q-msg" class="small mute"></span>
+  <span class="grow"></span>
+  <button type="button" class="btn small ghost" onclick="toggleAll(true)">모두 펼치기</button>
+  <button type="button" class="btn small ghost" onclick="toggleAll(false)">모두 접기</button>
+</div>
+{% for stage, rows in by_stage %}{% if rows %}
+{% set st_total = rows|rejectattr('status', 'equalto', '해당없음')|list|length %}
+{% set st_done = rows|selectattr('status', 'equalto', '완료')|list|length %}
+{% set st_todo = rows|selectattr('status', 'equalto', '미작성')|list|length %}
+<details class="card stage" data-stage="{{ stage }}" open>
+  <summary><h2>{{ stage }}</h2>
+    <span class="small mute">완료 {{ st_done }} / {{ st_total }}{% if st_todo %} · 미작성 {{ st_todo }}{% endif %} · 전체 {{ rows|length }}개</span>
+    <span class="small mute match-count"></span></summary>
+  <div class="scroll">
+  <table>
+    <thead><tr><th style="min-width:200px">문서</th><th>상태</th><th>문서번호</th><th>작성일</th><th>담당자</th><th>비고</th><th>파일</th><th class="save-col"></th></tr></thead>
+    {% for r in rows %}
+    <tr id="doc{{ r.id }}" class="doc-row" data-q="{{ (r.tname ~ ' ' ~ (r.tcode or '') ~ ' ' ~ (r.doc_no or ''))|lower }}">
+      <td>
+        <b>{{ r.tname }}</b>{% if r.tcode %} <span class="mute small">{{ r.tcode }}</span>{% endif %}{% if not r.required %} <span class="mute small">(선택)</span>{% endif %}
+        {% for k in r.link|links %}{% set L = linked[k] %}
+        <div class="small"><a href="{{ url_for(k, sid=s.id) }}">{{ LINKS[k] }} 기록 {{ L[0] }}건 · {{ L[1] }}일{% if L[2] %} · 최근 {{ L[2] }}{% endif %} →</a></div>
+        {% endfor %}
+      </td>
+      <td><select name="status" form="f{{ r.id }}">{% for x in DOC_STATUSES %}<option {{ 'selected' if r.status == x }}>{{ x }}</option>{% endfor %}</select></td>
+      <td><input type="text" name="doc_no" form="f{{ r.id }}" value="{{ r.doc_no or '' }}" style="width:110px"></td>
+      <td><input type="date" name="doc_date" form="f{{ r.id }}" value="{{ r.doc_date or '' }}"></td>
+      <td><input type="text" name="owner" form="f{{ r.id }}" value="{{ r.owner or '' }}" style="width:90px"></td>
+      <td><input type="text" name="note" form="f{{ r.id }}" value="{{ r.note or '' }}" style="width:130px"></td>
+      <td class="small" style="min-width:220px">
+        {% set fl = files.get(r.id, []) %}{% set shown = fl|rejectattr('hidden')|list %}{% set hid = fl|selectattr('hidden')|list %}
+        {% for f in shown %}
+        <div class="file">
+          <a href="{{ url_for('doc_file', fid=f.id) }}">{{ f.file_name }}</a>
+          <span class="mute">{{ (f.uploaded_at or '')[:16] }}{% if f.uploaded_by %} · {{ f.uploaded_by }}{% endif %}{% if f.note %} · {{ f.note }}{% endif %}</span>
+          <details class="inline"><summary class="mute">숨기기</summary>
+            <form method="post" action="{{ url_for('doc_file_hide', sid=s.id, did=r.id, fid=f.id) }}" class="row">
+              {{ csrf() }}<input type="text" name="reason" placeholder="숨기는 사유 (필수)" required style="width:160px">
+              <button class="btn small">숨기기</button>
+            </form>
+          </details>
+        </div>
+        {% endfor %}
+        {% if hid %}
+        <details><summary class="mute">숨긴 파일 {{ hid|length }}개</summary>
+          {% for f in hid %}
+          <div class="file mute"><a href="{{ url_for('doc_file', fid=f.id) }}">{{ f.file_name }}</a>
+            · {{ (f.hidden_at or '')[:16] }} {{ f.hidden_by }} 숨김: {{ f.hidden_reason }}</div>
+          {% endfor %}
+        </details>
+        {% endif %}
+        <input type="file" name="file" form="f{{ r.id }}" multiple style="width:200px;display:block">
+        <input type="text" name="file_note" form="f{{ r.id }}" placeholder="파일 메모 (예: 1주차)" style="width:200px;display:block;margin-top:4px">
+      </td>
+      <td class="save-col">
+        <form id="f{{ r.id }}" method="post" enctype="multipart/form-data" action="{{ url_for('doc_update', sid=s.id, did=r.id) }}">{{ csrf() }}</form>
+        <button class="btn small" form="f{{ r.id }}">저장</button>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  </div>
+</details>
+{% endif %}{% endfor %}
+<div id="doc-q-none" class="card mute" hidden>검색어와 맞는 문서가 없습니다.</div>
+<script>
+(function () {
+  var KEY = 'cro-docs-open-{{ s.id }}';
+  var stages = [].slice.call(document.querySelectorAll('details.stage'));
+  var q = document.getElementById('doc-q'), msg = document.getElementById('doc-q-msg'), none = document.getElementById('doc-q-none');
+  var searching = false;
+  // 펼침/접힘 상태를 이 PC 브라우저에 기억한다 (시험마다 따로)
+  function save() {
+    if (searching) return;
+    try { localStorage.setItem(KEY, JSON.stringify(stages.filter(function (d) { return d.open; }).map(function (d) { return d.dataset.stage; }))); } catch (e) {}
+  }
+  function restore() {
+    var open = null;
+    try { open = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
+    if (Array.isArray(open)) stages.forEach(function (d) { d.open = open.indexOf(d.dataset.stage) >= 0; });
+  }
+  restore();
+  // 저장 뒤 돌아온 문서(#doc12)가 접힌 칸에 있으면 펼쳐서 보여 준다
+  if (location.hash) {
+    var row = document.querySelector(location.hash);
+    if (row && row.classList.contains('doc-row')) { row.closest('details').open = true; row.scrollIntoView(); }
+  }
+  stages.forEach(function (d) { d.addEventListener('toggle', save); });
+  window.toggleAll = function (on) { stages.forEach(function (d) { d.open = on; }); save(); };
+
+  function filter() {
+    var t = q.value.trim().toLowerCase(), total = 0;
+    searching = !!t;
+    stages.forEach(function (d) {
+      var n = 0;
+      d.querySelectorAll('.doc-row').forEach(function (tr) {
+        var hit = !t || tr.dataset.q.indexOf(t) >= 0;
+        tr.hidden = !hit;
+        if (hit) n++;
+      });
+      d.querySelector('.match-count').textContent = t ? '· 검색 ' + n + '건' : '';
+      d.hidden = t && !n;
+      if (t && n) d.open = true;
+      total += n;
+    });
+    if (!t) restore();
+    none.hidden = !t || total > 0;
+    msg.textContent = t ? total + '건' : '';
+  }
+  q.addEventListener('input', filter);
+  q.addEventListener('keydown', function (e) { if (e.key === 'Escape') { q.value = ''; filter(); } });
+})();
+</script>
+{% endblock %}

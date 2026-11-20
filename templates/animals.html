@@ -1,0 +1,202 @@
+{% extends "study_base.html" %}
+{% block tab %}
+{% set ro = s.status == '종료' %}
+{% macro animal_row(i, v, sx, w) %}
+      <div class="arow"><span class="pfx"></span><input type="text" name="num_{{ i }}" value="{{ v }}" class="num" inputmode="numeric" placeholder="번호" autocomplete="off"><select name="asex_{{ i }}" class="asex" title="성별">{% for x in ['', '수', '암'] %}<option value="{{ x }}" {{ 'selected' if sx == x }}>{{ x or '성별 -' }}</option>{% endfor %}</select><input type="text" name="aw_{{ i }}" value="{{ w }}" class="aw" inputmode="decimal" placeholder="체중(선택)" title="초기 체중 ({{ s.weight_unit }}), 선택" autocomplete="off"><span class="mute small">{{ s.weight_unit }}</span><button type="button" class="btn small ghost" onclick="dropAnimal(this)" title="이 개체 지우기">×</button></div>
+{% endmacro %}
+{% macro group_block(i, r, errs) %}
+  <div class="gblock">
+    <div class="gside">
+      <div><label>군 이름 *</label><input type="text" name="name_{{ i }}" value="{{ r.name or '' }}" class="gname" placeholder="예: G1" pattern="[0-9A-Za-z가-힣_.]{1,20}" title="공백과 '-' 없이 20자 이내" style="width:110px"></div>
+      <div><label>군 성격 *</label><span class="kind-pick"><select name="kind_{{ i }}"><option value="">— 고르기 —</option>{% for k in GROUP_KINDS %}<option {{ 'selected' if r.kind_sel == k }}>{{ k }}</option>{% endfor %}<option {{ 'selected' if r.kind_sel == KIND_CUSTOM }}>{{ KIND_CUSTOM }}</option></select>
+        <input type="text" name="kind_custom_{{ i }}" value="{{ r.kind_custom or '' }}" placeholder="어떤 군인지" maxlength="30" style="width:120px" hidden></span></div>
+      <div><label>설명</label><input type="text" name="note_{{ i }}" value="{{ r.note or '' }}" placeholder="예: 10 mg/kg" maxlength="100" style="width:150px"></div>
+      <div><label>&nbsp;</label><button type="button" class="btn small danger" onclick="dropGroup(this)">군 삭제</button></div>
+    </div>
+    <div class="ganimals">
+      <div class="small mute acount"></div>
+      {% set sexes = r.sexes or [] %}{% set ws = r.weights or [] %}
+      {% for v in (r.nums or ['']) %}{{ animal_row(i, v, sexes[loop.index0] if loop.index0 < sexes|length else '', ws[loop.index0] if loop.index0 < ws|length else '') }}{% endfor %}
+      <button type="button" class="btn small ghost addanimal" onclick="addAnimal(this)">+ 개체 추가</button>
+    </div>
+    {% if errs %}<div class="small err gerr">↑ {{ errs|join(' / ') }}</div>{% endif %}
+  </div>
+{% endmacro %}
+{% if not ro %}
+<div class="card">
+  <h2>군 · 개체 등록</h2>
+  <form method="post" action="{{ url_for('add_groups', sid=s.id) }}" id="groups-form">
+    {{ csrf() }}
+    <input type="hidden" name="n" value="{{ rows|length }}">
+    <div class="row small" style="margin-bottom:8px">
+      <label>체중 측정일 <input type="date" name="wdate" value="{{ wdate }}" max="{{ today }}"></label>
+      <span class="mute">초기 체중을 적은 개체만 이 날짜로 체중 기록에 저장됩니다. 체중 칸은 비워 둬도 됩니다.</span>
+    </div>
+    <div id="gblocks">
+      {% for r in rows %}{{ group_block(loop.index0, r, errors.get(loop.index0)) }}{% endfor %}
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button type="button" class="btn ghost" onclick="addGroup()">+ 군 추가</button>
+      <span class="grow"></span>
+      <button class="btn">모두 등록</button>
+    </div>
+  </form>
+  <template id="group-tpl">{{ group_block('__i__', {}, none) }}</template>
+  <template id="animal-tpl">{{ animal_row('__i__', '', '', '') }}</template>
+  <p class="sub">군 이름을 한 번 적고, 오른쪽에 개체 번호를 숫자로 하나씩 넣습니다. <b>+ 개체 추가</b>를 누르거나 번호 칸에서 <b>Enter</b>(번호·체중 칸)를 누르면 같은 군에 개체 칸이 하나 더 생기고 다음 번호가 미리 채워집니다.
+    다른 군은 <b>+ 군 추가</b>로 넣습니다. 개체번호는 <b>군 이름-번호</b>(예: G1-1)로 만들어집니다.
+    한 군이라도 틀리면 아무것도 등록하지 않고 틀린 곳을 알려 줍니다. 등록 {{ n_reg }} / 계획 {{ s.n_animals }}마리</p>
+</div>
+{% endif %}
+{% for gr in groups %}
+<div class="card">
+  <div class="row between">
+    <h2>{{ gr.name }}
+      {% if gr.kind %}<span class="badge">{{ gr.kind }}</span>{% else %}<span class="badge">성격 미지정</span>{% endif %}
+      {% if gr.note %}<span class="mute small">{{ gr.note }}</span>{% endif %}
+      <span class="mute small">{{ gr.animals|length }}마리</span></h2>
+    {% if not ro %}
+    <div class="row">
+      <details><summary class="small mute">군 정보 수정</summary>
+        <form class="row" method="post" action="{{ url_for('group_edit', sid=s.id, gid=gr.id) }}">
+          {{ csrf() }}
+          {% set custom = gr.kind and gr.kind not in GROUP_KINDS %}
+          <span class="kind-pick"><select name="kind" required><option value="">— 성격 —</option>{% for k in GROUP_KINDS %}<option {{ 'selected' if gr.kind == k }}>{{ k }}</option>{% endfor %}<option {{ 'selected' if custom }}>{{ KIND_CUSTOM }}</option></select>
+          <input type="text" name="kind_custom" value="{{ gr.kind if custom else '' }}" placeholder="어떤 군인지 입력" maxlength="30" style="width:150px" {{ '' if custom else 'hidden' }}></span>
+          <input type="text" name="note" value="{{ gr.note }}" placeholder="설명" maxlength="100" style="width:180px">
+          <button class="btn small ghost">저장</button>
+        </form>
+        <p class="sub">군 이름은 개체번호에 들어가 있어 바꿀 수 없습니다.</p>
+      </details>
+      {% if not gr.animals %}
+      <form method="post" action="{{ url_for('group_delete', sid=s.id, gid=gr.id) }}">{{ csrf() }}<button class="btn small danger">빈 군 삭제</button></form>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+  {% if gr.animals %}
+  <table>
+    <thead><tr><th>개체번호</th><th>성별</th><th>상태</th>{% if not ro %}<th>상태 변경 (사유 필수)</th><th></th>{% endif %}</tr></thead>
+    {% for a in gr.animals %}
+    <tr>
+      <td>{{ a.animal_no }}</td>
+      <td>{% if ro %}{{ a.sex or '-' }}{% else %}
+        <form method="post" action="{{ url_for('animal_sex', sid=s.id, aid=a.id) }}" class="row" style="gap:4px">{{ csrf() }}
+          <select name="sex" onchange="this.form.querySelector('button').hidden = false">{% for x in ['', '수', '암'] %}<option value="{{ x }}" {{ 'selected' if (a.sex or '') == x }}>{{ x or '-' }}</option>{% endfor %}{% if a.sex and a.sex not in ['수', '암'] %}<option selected>{{ a.sex }}</option>{% endif %}</select>
+          <button class="btn small ghost" hidden>저장</button>
+        </form>{% endif %}</td>
+      <td><span class="badge b-{{ a.status }}">{{ a.status }}</span> <span class="mute small">{{ a.status_date or '' }}</span></td>
+      {% if not ro %}
+      <td>
+        <form class="row" method="post" action="{{ url_for('animal_status', sid=s.id, aid=a.id) }}">
+          {{ csrf() }}
+          <select name="status">{% for x in ANIMAL_STATUSES %}<option {{ 'selected' if a.status == x }}>{{ x }}</option>{% endfor %}</select>
+          <input type="date" name="status_date" value="{{ a.status_date or '' }}" max="{{ today }}">
+          <input type="text" name="reason" placeholder="사유" style="width:200px">
+          <button class="btn small ghost">변경</button>
+        </form>
+      </td>
+      <td>{% if a.id not in used %}<form method="post" action="{{ url_for('animal_delete', sid=s.id, aid=a.id) }}" onsubmit="return confirm('{{ a.animal_no }} 개체를 삭제할까요?')">{{ csrf() }}<button class="btn small danger">삭제</button></form>{% endif %}</td>
+      {% endif %}
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}<p class="mute">개체가 없습니다.</p>{% endif %}
+</div>
+{% else %}
+<div class="card mute">등록된 군이 없습니다. 위에서 군을 추가하면 개체가 함께 만들어집니다.</div>
+{% endfor %}
+{% if not ro and groups %}
+<div class="card">
+  <h2>기존 군에 개체 추가</h2>
+  <form class="row" method="post" action="{{ url_for('add_animal', sid=s.id) }}">
+    {{ csrf() }}
+    <select name="group_id">{% for gr in groups %}<option value="{{ gr.id }}">{{ gr.name }}{% if gr.kind %} ({{ gr.kind }}){% endif %}</option>{% endfor %}</select>
+    <input type="text" name="numbers" placeholder="개체 번호 (예: 11 또는 11-15)" required style="width:220px">
+    <select name="sex"><option value="">성별 -</option><option>수</option><option>암</option></select>
+    <button class="btn ghost">추가</button>
+  </form>
+  <p class="sub">숫자만 입력하면 고른 군 이름이 앞에 붙습니다. 예: G2에 <code>11</code> → G2-11</p>
+</div>
+{% endif %}
+<script>
+var CUSTOM = '{{ KIND_CUSTOM }}';
+// 군 성격에서 '직접 입력'을 고르면 입력 칸을 보여 주고 필수로 만든다
+function bindKind(box) {
+  var sel = box.querySelector('select'), txt = box.querySelector('input');
+  function sync() {
+    var on = sel.value === CUSTOM;
+    txt.hidden = !on; txt.required = on;
+    if (on && document.activeElement === sel) txt.focus();
+  }
+  sel.addEventListener('change', sync); sync();
+}
+document.querySelectorAll('.kind-pick').forEach(bindKind);
+
+var wrap = document.getElementById('gblocks');
+function blocks() { return wrap ? [].slice.call(wrap.querySelectorAll('.gblock')) : []; }
+// 군 이름이 바뀌면 개체 칸 앞의 "G1-"과 마리수를 다시 보여 준다
+function refresh(blk) {
+  var name = blk.querySelector('.gname').value.trim() || '?';
+  var nums = blk.querySelectorAll('.num'), n = 0;
+  blk.querySelectorAll('.pfx').forEach(function (p) { p.textContent = name + '-'; });
+  nums.forEach(function (x) { if (x.value.trim()) n++; });
+  blk.querySelector('.acount').textContent = '개체 ' + n + '마리';
+}
+// 블록 순서대로 name_0, num_0 … 으로 다시 매긴다
+function renumber() {
+  blocks().forEach(function (blk, i) {
+    blk.querySelectorAll('[name]').forEach(function (el) { el.name = el.name.replace(/_(\d+|__i__)$/, '_' + i); });
+  });
+  document.querySelector('#groups-form [name=n]').value = blocks().length;
+}
+function fromTpl(id) {
+  var t = document.createElement('div');
+  t.innerHTML = document.getElementById(id).innerHTML;
+  return t.firstElementChild;
+}
+function bindBlock(blk) {
+  blk.addEventListener('input', function () { refresh(blk); });
+  blk.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && (e.target.classList.contains('num') || e.target.classList.contains('aw'))) { e.preventDefault(); addAnimal(e.target); }
+  });
+  refresh(blk);
+}
+function addGroup() {
+  var blk = fromTpl('group-tpl');
+  wrap.appendChild(blk);
+  bindKind(blk.querySelector('.kind-pick')); bindBlock(blk); renumber();
+  blk.querySelector('.gname').focus();
+  return blk;
+}
+function dropGroup(btn) {
+  var blk = btn.closest('.gblock');
+  var filled = [].some.call(blk.querySelectorAll('input[type=text]'), function (x) { return x.value.trim(); });
+  if (filled && !confirm('이 군과 입력한 개체 번호를 지울까요?')) return;
+  blk.remove();
+  if (!blocks().length) addGroup();
+  renumber();
+}
+// 같은 군에 개체 칸을 하나 더한다. 마지막 번호가 숫자면 다음 번호를 채워 두고 선택해 둔다(바로 덮어쓰기 가능).
+// 성별은 바로 윗 개체와 같게 채워 둔다.
+function addAnimal(el) {
+  var blk = el.closest('.gblock'), list = blk.querySelector('.ganimals');
+  var rows = blk.querySelectorAll('.arow'), lastRow = rows[rows.length - 1];
+  var last = lastRow && lastRow.querySelector('.num');
+  var row = fromTpl('animal-tpl'), input = row.querySelector('.num');
+  if (last && /^\d+$/.test(last.value.trim())) input.value = +last.value.trim() + 1;
+  if (lastRow) row.querySelector('.asex').value = lastRow.querySelector('.asex').value;
+  list.insertBefore(row, list.querySelector('.addanimal'));
+  renumber(); refresh(blk);
+  input.focus(); input.select();
+  return input;
+}
+function dropAnimal(btn) {
+  var blk = btn.closest('.gblock');
+  if (blk.querySelectorAll('.arow').length > 1) btn.closest('.arow').remove();
+  else blk.querySelector('.num').value = '';
+  refresh(blk);
+}
+blocks().forEach(bindBlock);
+</script>
+{% endblock %}

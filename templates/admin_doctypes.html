@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block body %}
+<h1>문서 종류 (SOP 관리 문서)</h1>
+<p class="sub">여기 등록한 문서가 시험을 등록할 때 체크리스트로 자동 생성됩니다. 초기 목록은 예시이므로 회사 SOP의 문서 목록으로 바꾸세요.
+'프로그램 연계'를 체크하면 그 문서 옆에 체중·임상증상 입력 현황이 함께 표시됩니다. 한 서식에 둘 다 기록하면 둘 다 체크하세요.</p>
+<div class="card row between">
+  <div><b>SOP에서 가져오기</b> <span class="sub">회사 SOP 파일(HWPX·HWP·PDF)을 올리면 서식 목록을 찾아 한 번에 등록합니다.</span></div>
+  <a class="btn" href="{{ url_for('doctypes_import') }}">SOP 파일 올리기</a>
+</div>
+<div class="card">
+  <h2>문서 종류 추가</h2>
+  <form class="row" method="post">
+    {{ csrf() }}
+    <input type="text" name="code" placeholder="서식 번호(선택)" style="width:150px">
+    <input type="text" name="name" placeholder="문서명" required style="width:260px">
+    <select name="stage">{% for x in STAGES %}<option>{{ x }}</option>{% endfor %}</select>
+    <select name="required"><option value="1">필수</option><option value="0">선택</option></select>
+    <span class="small">연계: {% for k, v in LINKS.items() %}<label><input type="checkbox" name="link" value="{{ k }}"> {{ v }}</label> {% endfor %}</span>
+    <input type="number" name="ord" value="{{ (types|map(attribute='ord')|max if types else 0) + 10 }}" style="width:80px" title="표시 순서">
+    <button class="btn">추가</button>
+  </form>
+</div>
+<div class="card scroll">
+<table>
+  <thead><tr><th>순서</th><th>서식 번호</th><th>문서명</th><th>단계</th><th>필수</th><th>프로그램 연계</th><th>사용</th><th></th></tr></thead>
+  {% for t in types %}
+  <tr>
+    <td><input type="number" name="ord" form="t{{ t.id }}" value="{{ t.ord }}" style="width:70px"></td>
+    <td><input type="text" name="code" form="t{{ t.id }}" value="{{ t.code }}" style="width:140px"></td>
+    <td><input type="text" name="name" form="t{{ t.id }}" value="{{ t.name }}" required style="width:280px"></td>
+    <td><select name="stage" form="t{{ t.id }}">{% for x in STAGES %}<option {{ 'selected' if t.stage == x }}>{{ x }}</option>{% endfor %}</select></td>
+    <td><select name="required" form="t{{ t.id }}"><option value="1" {{ 'selected' if t.required }}>필수</option><option value="0" {{ 'selected' if not t.required }}>선택</option></select></td>
+    <td class="small">{% set on = t.link|links %}{% for k, v in LINKS.items() %}<label><input type="checkbox" name="link" value="{{ k }}" form="t{{ t.id }}" {{ 'checked' if k in on }}> {{ v }}</label> {% endfor %}</td>
+    <td><select name="active" form="t{{ t.id }}"><option value="1" {{ 'selected' if t.active }}>사용</option><option value="0" {{ 'selected' if not t.active }}>중지</option></select></td>
+    <td><form id="t{{ t.id }}" method="post">{{ csrf() }}<input type="hidden" name="id" value="{{ t.id }}"></form><button class="btn small" form="t{{ t.id }}">저장</button></td>
+  </tr>
+  {% endfor %}
+</table>
+</div>
+<p class="sub">'중지'한 문서는 새로 등록하는 시험부터 빠집니다. 이미 만들어진 체크리스트 항목은 그대로 남습니다.</p>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block body %}
+<h1>사용자 관리</h1>
+<div class="card">
+  <h2>사용자 추가</h2>
+  <form class="row" method="post">
+    {{ csrf() }}<input type="hidden" name="action" value="add">
+    <input type="text" name="username" placeholder="아이디" required>
+    <input type="text" name="name" placeholder="이름" required>
+    <input type="password" name="password" placeholder="초기 비밀번호 (8자 이상)" required minlength="8">
+    <select name="role"><option value="user">일반</option><option value="admin">관리자</option></select>
+    <button class="btn">추가</button>
+  </form>
+</div>
+<div class="card scroll">
+<table>
+  <thead><tr><th>아이디</th><th>이름</th><th>권한</th><th>상태</th><th>비밀번호 초기화</th><th></th></tr></thead>
+  {% for u in users %}
+  <tr>
+    <td>{{ u.username }}</td><td>{{ u.name }}</td><td>{{ '관리자' if u.role == 'admin' else '일반' }}</td>
+    <td>{{ '사용' if u.active else '중지' }}</td>
+    <td><form class="row" method="post">{{ csrf() }}<input type="hidden" name="action" value="reset"><input type="hidden" name="id" value="{{ u.id }}">
+      <input type="password" name="password" placeholder="새 비밀번호" minlength="8" required><button class="btn small ghost">변경</button></form></td>
+    <td>{% if u.id != g.user['id'] %}<form method="post">{{ csrf() }}<input type="hidden" name="action" value="toggle"><input type="hidden" name="id" value="{{ u.id }}">
+      <button class="btn small {{ 'danger' if u.active else 'ghost' }}">{{ '사용 중지' if u.active else '다시 사용' }}</button></form>{% endif %}</td>
+  </tr>
+  {% endfor %}
+</table>
+</div>
+<p class="sub">기록에 이름이 남기 때문에 계정은 삭제하지 않고 '사용 중지'로 처리합니다. 계정은 1인 1개로 쓰세요.</p>
+{% endblock %}

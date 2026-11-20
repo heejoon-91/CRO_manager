@@ -1,0 +1,53 @@
+{% extends "study_base.html" %}
+{% block tab %}
+<div class="row between noprint" style="margin-bottom:12px">
+  <form class="row" method="get" action="{{ url_for('clinical_entry', sid=s.id) }}">
+    <label style="margin:0">관찰일</label>
+    <input type="date" name="date" value="{{ today }}" max="{{ today }}" required>
+    <button class="btn" {{ 'disabled' if s.status == '종료' }}>임상증상 입력</button>
+  </form>
+  <div class="row">
+    <a class="btn ghost" href="{{ url_for('clinical', sid=s.id, abn=(0 if abn else 1)) }}">{{ '전체 보기' if abn else '이상 소견만 보기' }}</a>
+    <a class="btn ghost" href="{{ url_for('clinical_csv', sid=s.id) }}">엑셀(CSV) 내보내기</a>
+    <button class="btn ghost" onclick="window.print()">인쇄</button>
+  </div>
+</div>
+{% if not summary %}
+<div class="card mute">아직 임상증상 기록이 없습니다. 위에서 관찰일을 고르고 <b>임상증상 입력</b>을 누르세요.</div>
+{% else %}
+<div class="card">
+  <h2>관찰일별 요약</h2>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>관찰일</th><th class="n">관찰 개체</th><th class="n">이상</th><th></th></tr></thead>
+    {% for r in summary %}
+    <tr>
+      <td class="nowrap">{{ r.date }}{% if r.date in days %} <span class="mute small">D{{ '%+d' % days[r.date] if days[r.date] else '0' }}</span>{% endif %}</td>
+      <td class="n">{{ r.n }}</td>
+      <td class="n">{% if r.abn %}<span class="badge b-이상">{{ r.abn }}</span>{% else %}0{% endif %}</td>
+      <td><a href="{{ url_for('clinical_entry', sid=s.id, date=r.date) }}">입력 화면</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+  </div>
+</div>
+<div class="card">
+  <h2>{{ '이상 소견' if abn else '전체 기록' }} <span class="mute small">{{ rows|length }}건</span></h2>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>관찰일</th><th>군</th><th>개체</th><th>판정</th><th>증상</th><th>정도</th><th>비고</th><th>기록자</th></tr></thead>
+    {% for r in rows %}
+    <tr>
+      <td class="nowrap">{{ r.date }}</td><td>{{ r.gname }}{% if r.gkind %} <span class="mute small">{{ r.gkind }}</span>{% endif %}</td><td class="nowrap">{{ r.animal_no }}</td>
+      <td><span class="badge b-{{ '정상' if r.normal else '이상' }}">{{ '정상' if r.normal else '이상' }}</span></td>
+      <td>{{ r.signs or '' }}</td><td>{{ r.severity or '' }}</td><td>{{ r.note or '' }}</td>
+      <td class="mute small nowrap">{{ r.entered_by }}<br>{{ r.entered_at }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="8" class="mute">해당 기록이 없습니다.</td></tr>
+    {% endfor %}
+  </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
